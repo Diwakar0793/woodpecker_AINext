@@ -7,32 +7,110 @@
     <link rel="stylesheet" href="assets/css/bootstrap.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
+        body {
+            background-color: #f8f9fa !important;
+            color: #333 !important;
+        }
+        
         .debug-info {
-            background: #f8f9fa;
+            background: #fff !important;
             border: 1px solid #dee2e6;
             border-radius: 5px;
             padding: 15px;
             margin: 20px 0;
+            color: #333 !important;
         }
+        
         .debug-info h4 {
-            color: #495057;
+            color: #495057 !important;
             margin-bottom: 10px;
         }
+        
+        .debug-info p {
+            color: #333 !important;
+        }
+        
         .debug-info pre {
-            background: #fff;
+            background: #f8f9fa !important;
             border: 1px solid #dee2e6;
             border-radius: 3px;
             padding: 10px;
             font-size: 12px;
             max-height: 200px;
             overflow-y: auto;
+            color: #333 !important;
         }
+        
         .test-form {
-            background: #fff;
+            background: #fff !important;
             border: 1px solid #dee2e6;
             border-radius: 5px;
             padding: 20px;
             margin: 20px 0;
+            color: #333 !important;
+        }
+        
+        .test-form label {
+            color: #333 !important;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            background-color: #fff !important;
+            color: #333 !important;
+            border: 1px solid #ced4da !important;
+        }
+        
+        .form-control:focus {
+            background-color: #fff !important;
+            color: #333 !important;
+            border-color: #80bdff !important;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+        }
+        
+        .btn-primary {
+            background-color: #007bff !important;
+            border-color: #007bff !important;
+            color: #fff !important;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0056b3 !important;
+            border-color: #0056b3 !important;
+        }
+        
+        .alert {
+            color: #333 !important;
+        }
+        
+        .alert-success {
+            background-color: #d4edda !important;
+            border-color: #c3e6cb !important;
+            color: #155724 !important;
+        }
+        
+        .alert-danger {
+            background-color: #f8d7da !important;
+            border-color: #f5c6cb !important;
+            color: #721c24 !important;
+        }
+        
+        .alert-info {
+            background-color: #d1ecf1 !important;
+            border-color: #bee5eb !important;
+            color: #0c5460 !important;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            color: #333 !important;
+        }
+        
+        ol, ul {
+            color: #333 !important;
+        }
+        
+        li {
+            color: #333 !important;
         }
     </style>
 </head>
@@ -111,11 +189,18 @@
     <script src="assets/js/bootstrap.bundle.min.js"></script>
     <script>
         $(document).ready(function() {
-            // Load server information
-            $.get('test-contact.php', function(data) {
-                $('#serverInfo').html(data);
+            // Test basic PHP connectivity first
+            $.get('simple-test.php', function(data) {
+                $('#serverInfo').html('<div class="alert alert-success">✓ PHP is working! ' + data.message + '</div>');
+                
+                // Now load server information
+                $.get('test-contact.php', function(data) {
+                    $('#serverInfo').append(data);
+                }).fail(function() {
+                    $('#serverInfo').append('<div class="alert alert-warning">Could not load detailed server info, but PHP is working.</div>');
+                });
             }).fail(function() {
-                $('#serverInfo').html('<p style="color: red;">Could not load server information. Make sure test-contact.php is accessible.</p>');
+                $('#serverInfo').html('<div class="alert alert-danger">✗ PHP is not working or simple-test.php is not accessible. Check your server configuration.</div>');
             });
             
             // Load debug log
@@ -123,6 +208,13 @@
                 $('#debugLog').html('<pre>' + data + '</pre>');
             }).fail(function() {
                 $('#debugLog').html('<p style="color: orange;">No debug log found yet. Submit the form to generate logs.</p>');
+            });
+            
+            // Test contact handler accessibility first
+            $.get('contact-handler.php', function(data) {
+                $('#testResult').html('<div class="alert alert-info">Contact handler is accessible. Testing form submission...</div>');
+            }).fail(function(xhr, status, error) {
+                $('#testResult').html('<div class="alert alert-danger">✗ Contact handler not accessible. Error: ' + status + ' - ' + error + '<br>Status Code: ' + xhr.status + '</div>');
             });
             
             // Test form submission
