@@ -299,7 +299,29 @@
 				}
 			},
 			error: function(xhr, status, error) {
-				showNotification('error', 'Sorry, there was an error sending your message. Please try again later.');
+				console.error('AJAX Error:', xhr, status, error);
+				
+				var errorMessage = 'Sorry, there was an error sending your message.';
+				var errorDetails = '';
+				
+				if (xhr.status === 0) {
+					errorDetails = 'Network error - please check your internet connection.';
+				} else if (xhr.status === 404) {
+					errorDetails = 'Contact form handler not found. Please contact the administrator.';
+				} else if (xhr.status === 500) {
+					errorDetails = 'Server error. Please try again later or contact support.';
+				} else if (xhr.responseText) {
+					try {
+						var response = JSON.parse(xhr.responseText);
+						if (response.message) {
+							errorMessage = response.message;
+						}
+					} catch (e) {
+						errorDetails = 'Unexpected server response.';
+					}
+				}
+				
+				showErrorNotification(errorMessage, errorDetails);
 			},
 			complete: function() {
 				// Re-enable submit button
@@ -315,24 +337,33 @@
 	}
 	
 	// Notification function
-	function showNotification(type, message) {
+	function showNotification(type, message, duration = 5000) {
 		// Remove existing notifications
 		$('.notification').remove();
 		
 		var notificationClass = type === 'success' ? 'alert-success' : 'alert-danger';
 		var icon = type === 'success' ? 'ri-check-line' : 'ri-error-warning-line';
 		
-		var notification = $('<div class="notification alert ' + notificationClass + ' alert-dismissible fade show" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;">' +
+		var notification = $('<div class="notification alert ' + notificationClass + ' alert-dismissible fade show" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 500px;">' +
 			'<i class="' + icon + '"></i> ' + message +
 			'<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
 			'</div>');
 		
 		$('body').append(notification);
 		
-		// Auto-hide after 5 seconds
+		// Auto-hide after specified duration
 		setTimeout(function() {
 			notification.alert('close');
-		}, 5000);
+		}, duration);
+	}
+	
+	// Enhanced error notification
+	function showErrorNotification(message, details = '') {
+		var fullMessage = message;
+		if (details) {
+			fullMessage += '<br><small style="opacity: 0.8;">' + details + '</small>';
+		}
+		showNotification('error', fullMessage, 8000);
 	}
 	
 	// Clear error messages on input focus

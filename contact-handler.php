@@ -1,15 +1,29 @@
 <?php
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
 
+// Log function for debugging
+function log_debug($message) {
+    $log_file = 'contact_debug.log';
+    $timestamp = date('Y-m-d H:i:s');
+    file_put_contents($log_file, "[$timestamp] $message\n", FILE_APPEND | LOCK_EX);
+}
+
 // Check if the request method is POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    log_debug("Invalid request method: " . $_SERVER['REQUEST_METHOD']);
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
     exit;
 }
+
+log_debug("Contact form submission started");
 
 // Get form data
 $name = isset($_POST['name']) ? trim($_POST['name']) : '';
@@ -17,6 +31,9 @@ $email = isset($_POST['email']) ? trim($_POST['email']) : '';
 $subject = isset($_POST['subject']) ? trim($_POST['subject']) : '';
 $phone = isset($_POST['phone_number']) ? trim($_POST['phone_number']) : '';
 $message = isset($_POST['message']) ? trim($_POST['message']) : '';
+
+// Log received data
+log_debug("Received form data - Name: $name, Email: $email, Subject: $subject, Phone: $phone, Message: " . substr($message, 0, 50) . "...");
 
 // Validate required fields
 $errors = [];
@@ -45,9 +62,12 @@ if (empty($message)) {
 
 // If there are validation errors, return them
 if (!empty($errors)) {
+    log_debug("Validation errors: " . implode(', ', $errors));
     echo json_encode(['success' => false, 'message' => 'Validation failed', 'errors' => $errors]);
     exit;
 }
+
+log_debug("Validation passed, proceeding with email sending");
 
 // Sanitize input data
 $name = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
@@ -60,6 +80,15 @@ $message = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
 $to = 'diwakar.l@softcons.net';
 $email_subject = 'New Contact Form Submission: ' . $subject;
 $from_email = 'noreply@' . $_SERVER['HTTP_HOST'];
+
+// Check if mail function is available
+if (!function_exists('mail')) {
+    log_debug("ERROR: PHP mail() function is not available");
+    echo json_encode(['success' => false, 'message' => 'Email service is not configured on this server. Please contact the administrator.']);
+    exit;
+}
+
+log_debug("Email configuration - To: $to, From: $from_email, Subject: $email_subject");
 
 // Create email content
 $email_body = "
@@ -124,10 +153,15 @@ $headers = [
 
 $headers_string = implode("\r\n", $headers);
 
+log_debug("Attempting to send email to: $to");
+
 // Send email
 $mail_sent = mail($to, $email_subject, $email_body, $headers_string);
 
+log_debug("Mail function returned: " . ($mail_sent ? 'TRUE' : 'FALSE'));
+
 if ($mail_sent) {
+    log_debug("Main email sent successfully to: $to");
     // Send auto-reply to the user
     $auto_reply_subject = 'Thank you for contacting us - ' . $subject;
     $auto_reply_body = "
@@ -171,10 +205,22 @@ if ($mail_sent) {
         'X-Mailer: PHP/' . phpversion()
     ];
     
-    mail($email, $auto_reply_subject, $auto_reply_body, implode("\r\n", $auto_reply_headers));
+    $auto_reply_sent = mail($email, $auto_reply_subject, $auto_reply_body, implode("\r\n", $auto_reply_headers));
+    log_debug("Auto-reply sent: " . ($auto_reply_sent ? 'TRUE' : 'FALSE'));
     
     echo json_encode(['success' => true, 'message' => 'Thank you! Your message has been sent successfully. We will get back to you soon.']);
 } else {
-    echo json_encode(['success' => false, 'message' => 'Sorry, there was an error sending your message. Please try again later.']);
+    log_debug("ERROR: Failed to send main email");
+    
+    // Get the last error
+    $last_error = error_get_last();
+    $error_message = 'Sorry, there was an error sending your message. Please try again later.';
+    
+    if ($last_error) {
+        log_debug("Last PHP error: " . $last_error['message']);
+        $error_message .= ' Error details: ' . $last_error['message'];
+    }
+    
+    echo json_encode(['success' => false, 'message' => $error_message]);
 }
 ?>
