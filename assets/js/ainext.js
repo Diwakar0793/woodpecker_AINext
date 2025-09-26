@@ -192,5 +192,153 @@
 	  
 	  window.onscroll = calcScrollValue;
 	  window.onload = calcScrollValue;
+
+	// Contact Form Handler
+	$('#contactForm').on('submit', function(e) {
+		e.preventDefault();
+		
+		var $form = $(this);
+		var $submitBtn = $form.find('button[type="submit"]');
+		var originalText = $submitBtn.html();
+		
+		// Disable submit button and show loading
+		$submitBtn.prop('disabled', true).html('<i class="ri-loader-4-line"></i> Sending...');
+		
+		// Clear previous error messages
+		$form.find('.help-block').text('');
+		$form.find('.form-group').removeClass('has-error');
+		
+		// Get form data
+		var formData = {
+			name: $form.find('#name').val(),
+			email: $form.find('#email').val(),
+			subject: $form.find('#subject').val(),
+			phone_number: $form.find('#phone_number').val(),
+			message: $form.find('#message').val()
+		};
+		
+		// Basic client-side validation
+		var isValid = true;
+		
+		if (!formData.name.trim()) {
+			$form.find('#name').closest('.form-group').addClass('has-error');
+			$form.find('#name').next('.help-block').text('Please enter your name');
+			isValid = false;
+		}
+		
+		if (!formData.email.trim()) {
+			$form.find('#email').closest('.form-group').addClass('has-error');
+			$form.find('#email').next('.help-block').text('Please enter your email address');
+			isValid = false;
+		} else if (!isValidEmail(formData.email)) {
+			$form.find('#email').closest('.form-group').addClass('has-error');
+			$form.find('#email').next('.help-block').text('Please enter a valid email address');
+			isValid = false;
+		}
+		
+		if (!formData.subject.trim()) {
+			$form.find('#subject').closest('.form-group').addClass('has-error');
+			$form.find('#subject').next('.help-block').text('Please enter your subject');
+			isValid = false;
+		}
+		
+		if (!formData.phone_number.trim()) {
+			$form.find('#phone_number').closest('.form-group').addClass('has-error');
+			$form.find('#phone_number').next('.help-block').text('Please enter your phone number');
+			isValid = false;
+		}
+		
+		if (!formData.message.trim()) {
+			$form.find('#message').closest('.form-group').addClass('has-error');
+			$form.find('#message').next('.help-block').text('Please enter your message');
+			isValid = false;
+		}
+		
+		if (!isValid) {
+			$submitBtn.prop('disabled', false).html(originalText);
+			return;
+		}
+		
+		// Send AJAX request
+		$.ajax({
+			url: 'contact-handler.php',
+			type: 'POST',
+			data: formData,
+			dataType: 'json',
+			success: function(response) {
+				if (response.success) {
+					// Show success message
+					showNotification('success', response.message);
+					$form[0].reset();
+				} else {
+					// Show error message
+					showNotification('error', response.message);
+					
+					// Show field-specific errors if available
+					if (response.errors) {
+						response.errors.forEach(function(error) {
+							// Try to match error to specific field
+							if (error.toLowerCase().includes('name')) {
+								$form.find('#name').closest('.form-group').addClass('has-error');
+								$form.find('#name').next('.help-block').text(error);
+							} else if (error.toLowerCase().includes('email')) {
+								$form.find('#email').closest('.form-group').addClass('has-error');
+								$form.find('#email').next('.help-block').text(error);
+							} else if (error.toLowerCase().includes('subject')) {
+								$form.find('#subject').closest('.form-group').addClass('has-error');
+								$form.find('#subject').next('.help-block').text(error);
+							} else if (error.toLowerCase().includes('phone')) {
+								$form.find('#phone_number').closest('.form-group').addClass('has-error');
+								$form.find('#phone_number').next('.help-block').text(error);
+							} else if (error.toLowerCase().includes('message')) {
+								$form.find('#message').closest('.form-group').addClass('has-error');
+								$form.find('#message').next('.help-block').text(error);
+							}
+						});
+					}
+				}
+			},
+			error: function(xhr, status, error) {
+				showNotification('error', 'Sorry, there was an error sending your message. Please try again later.');
+			},
+			complete: function() {
+				// Re-enable submit button
+				$submitBtn.prop('disabled', false).html(originalText);
+			}
+		});
+	});
+	
+	// Email validation function
+	function isValidEmail(email) {
+		var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		return emailRegex.test(email);
+	}
+	
+	// Notification function
+	function showNotification(type, message) {
+		// Remove existing notifications
+		$('.notification').remove();
+		
+		var notificationClass = type === 'success' ? 'alert-success' : 'alert-danger';
+		var icon = type === 'success' ? 'ri-check-line' : 'ri-error-warning-line';
+		
+		var notification = $('<div class="notification alert ' + notificationClass + ' alert-dismissible fade show" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;">' +
+			'<i class="' + icon + '"></i> ' + message +
+			'<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+			'</div>');
+		
+		$('body').append(notification);
+		
+		// Auto-hide after 5 seconds
+		setTimeout(function() {
+			notification.alert('close');
+		}, 5000);
+	}
+	
+	// Clear error messages on input focus
+	$('#contactForm input, #contactForm textarea').on('focus', function() {
+		$(this).closest('.form-group').removeClass('has-error');
+		$(this).next('.help-block').text('');
+	});
 		
 })(jQuery);
